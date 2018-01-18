@@ -25,7 +25,7 @@
 \def\@maketitle {
 	\begin{center}
 		\fontsize{14pt}{0pt}\selectfont
-                {\bf \@title{}}
+                {\mc \@title{}}
 	\end{center}
 	\vspace{1pt}
 	\begin{flushleft}
@@ -109,11 +109,11 @@ CMSN\cite{CMSN}はCSNをモバイルエージェントの探索用に拡張し�
 図\ref{fig:ring_struct_algorithm}にリング構築アルゴリズムを示す.
 リング構築はクラスタヘッドがリング構築メッセージをブロードキャストして開始する(1).
 メッセージを受け取ったノードのうち, どのリングにも属していないノードはACKを返す(2).
-N1は受信したACKの中で物理的に近いノードをリンク先に選び, そのノードに対してリンクを結ぶ(3).
+N1は受信したACKの中で物理的に近いノードをリンク先に選び, そのノードに対してリンクする(3).
 リンクされたN2は同様にブロードキャストする(4).
 近隣のノードはN2にACKを返すが, この際, N1は既にリングに参加しているため, ACKを返さない(5).
-N2は最も近いN3にリンクを結ぶ(6).
-リンク時に, リングに参加しているノード数, クラスタヘッドの識別子, 所属する階層の深さ(level)の情報を通知する.
+その結果, N2は最も近いN3にリンクする(6).
+ノードは近接ノードリンクする時, リングに参加しているノード数, クラスタヘッドの識別子, 所属する階層の深さ(level)の情報を通知する.
 参加数が参加限界数(limit: \begin{math} top\_limit / 2^{level-1} \end{math})未満ならば, 同様の手順でリンク先のノードを探索する.
 参加するノード数が限界に達したか, ブロードキャストにACKが帰ってこなかった場合, リング構築完了メッセージをクラスタヘッドに送信する.
 リング構築完了メッセージを受け取ったクラスタヘッドはリングの参加限界数が3個以上であれば下層のリング構築を開始する.
@@ -128,22 +128,22 @@ N2は最も近いN3にリンクを結ぶ(6).
 \end{figure}
 
 \section{検索結果の返信}
-リング構築後に検索結果を検索元のノードに返信するためのアルゴリズムについて述べる.
-検索時, 返信時のメッセージはハッシュ値, 経路情報, 経路情報のインデックス, 検索結果から構成される.
-経路情報はノードの識別子を格納する配列であり, 最長はノード総数をN, 階層数をMとした時 2*MlogN となる.
-検索後, 結果を配列に格納したノードは配列の末尾の識別子を参照し, 識別子のノードに結果メッセージ送信する.
+リング構築後, 検索結果を検索元のノードに返信するためのアルゴリズムについて述べる.
+検索時, 返信時のメッセージは, ハッシュ値, 経路情報, 検索結果から構成される.
+経路情報はノードの識別子を格納するスタックであり, 最長はノード総数をN, 階層数をMとした時 2*MlogN となる.
+検索後, スタックから識別子を取り出し, 識別子のノードに結果メッセージを送信する.
 この時, 識別子のノードは物理的に近い距離であることがリング構築時に保証されているため, メッセージが届かないことはない.
-メッセージを受け取ったノードはインデックスを参照し, 配列に格納されている識別子を取得する.
-インデックスをデクリメントしてから識別子のノードに同様にメッセージを送信し, 配列の先頭のノードまで送信を繰り返す. 
+メッセージを受け取ったノードは同様にスタックから識別子を取り出し, 識別子のノードにメッセージを送信する.
+これをスタックが空になるまで繰り返す. 
 
 \section{検証と考察}
-検証にはWSN用OSであるContiki\cite{Contiki}と付属するシミュレータ, Coojaを用いた.
+検証にはWSN用OSであるContiki\cite{Contiki}と付属するシミュレータ, Coojaを用い,
 C言語で提案アルゴリズムを実装した.
 \subsection{リング構築}
 ノードを正方形の領域内にランダムに配置し, 
 配置数と領域の大きさを変え, リング構築をそれぞれ10回行った結果を表\ref{tabl:ring_struct}に示す.
 全ての実験で確実にリングを構築することができた.
-リングの参加率がこのような結果となった原因はノードの配置によって図\ref{fig:ring_struct}のように, 
+リングの参加率が表\ref{tabl:ring_struct}のような結果となったのはノードの配置によって図\ref{fig:ring_struct}のように, 
 リングに参加しているノードの分布が領域内の局所的な部分に集中してしまい, 早々にリンクするノードを発見できなくなったためと考える.
 
 % 評価表
@@ -166,22 +166,19 @@ C言語で提案アルゴリズムを実装した.
 \end{figure}
 \subsection{データ検索}
 最上層の参加数を8個, 階層数を3個, 合計参加数を32個のリングを構築し, 全てのノードで10回の検索を実行した.
-そして, 検索後の応答パケットに経路情報を持たせ, それを元に返信する場合と, 
-経路情報を持たせず返信する場合での返信にかかる消費電力を比較する.
-経路情報を持たない場合は近くに検索元のノードが存在しなければ近隣のノードをランダムに一つ選び, 
-送信するランダムなマルチホップ通信の手法を用いる.
-その結果を図\ref{tabl:battery_eval}に示す.
-消費電力は経路情報をもたせた場合, ランダムなマルチホップに比べて50\%近く削減されている.
-WSNは数年に渡る長期間での運用となるため, 消費電力の差は運用期間, ノード数によって非常に大きくなると考えられる.
-従って, 結果を検索元のノードに返信するに経路情報を利用するのは有用であると考える.
+そして, 検索後の応答パケットに経路情報を持たせ, それを元に結果を返信した時の消費電力を検証した.
+その結果を表\ref{tabl:battery_eval}に示す.
+消費電力は24時間あたり1.886Wであり, これはノードの電力総量を21600J\cite{TOSSIM}とした場合,
+理論上, 連続11452日の稼働が可能であると言える.
+WSNは数年にわたる長期間での運用であるため, 検索結果の返信を経路情報を用いて行うことは有効であると考える.
 \begin{table}[htb]
-	\scalebox{1}{
+	\scalebox{0.80}{
 	\begin{tabular}{|c|c|c|} \hline
-		 & 経路情報あり & 経路情報なし \\ \hline
-		消費電力(mW) & 32.391 & 62.752 \\ \hline
+		実行時間 & 消費電力(W) & 24時間あたりの消費電力(W)\\ \hline
+		26:44 & 0.0324 & 1.886 \\ \hline
 	\end{tabular}
 	}
-	\caption{リング構築}\label{tabl:battery_eval}
+	\caption{経路情報を用いた検索による消費電力量}\label{tabl:battery_eval}
 \end{table}
 
 % TODO
@@ -199,18 +196,20 @@ WSNは数年に渡る長期間での運用となるため, 消費電力の差は
 {\small
 % \bibitem{WSN-Surver}
 % Khan, Imran, et al. "Wireless sensor network virtualization: A survey." IEEE Communications Surveys and Tutorials 18.1 (2016): 553-576.
-\bibitem{DHT-on-WSN-survey}
-Thanh, Vinh Vu, et al. "A survey of routing using dhts over wireless sensor networks." Proceedings of The 6th international conference on information technology and applications (ICITA 2009). 2009.
 \bibitem{DHT}
 江崎浩: ''P2P(ピア・ツー・ピア)教科書'', インプレスR\&D (2008-1)
+\bibitem{DHT-on-WSN-survey}
+Thanh, Vinh Vu, et al. "A survey of routing using dhts over wireless sensor networks." Proceedings of The 6th international conference on information technology and applications (ICITA 2009). 2009.
+\bibitem{Chord}
+Stoica, Ion, et al. "Chord: A scalable peer-to-peer lookup service for internet applications." ACM SIGCOMM Computer Communication Review 31.4 (2001): 149-160.
 \bibitem{CSN}
 Ali {\em et al.}: CSN: A network protocol for serving dynamic queries in large-scale wireless sensor networks, In {\em Proceeding of the Second Annual Conference on Communication Networks and Services Research}, 2004, pp.165-174.
 \bibitem{CMSN}
 Hiroaki Fukuda, Paul Leger, and Keita Namiki. "CMSN: An Efficient and Effective Agent Lookup for Mobile Agent Middleware." J. UCS 22.8 (2016): 1072-1096.
-\bibitem{Chord}
-Stoica, Ion, et al. "Chord: A scalable peer-to-peer lookup service for internet applications." ACM SIGCOMM Computer Communication Review 31.4 (2001): 149-160.
 \bibitem{Contiki}
 Dunkels, Adam, Bjorn Gronvall, and Thiemo Voigt. "Contiki-a lightweight and flexible operating system for tiny networked sensors." Local Computer Networks, 2004. 29th Annual IEEE International Conference on. IEEE, 2004.
 }
+\bibitem{TOSSIM}
+Perla, Enrico, et al. "PowerTOSSIM z: realistic energy modelling for wireless sensor network environments." Proceedings of the 3nd ACM workshop on Performance monitoring and measurement of heterogeneous wireless and wired networks. ACM, 2008.
 \end{thebibliography}
 \end{document}
